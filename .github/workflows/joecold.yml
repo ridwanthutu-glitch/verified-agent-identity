@@ -13,7 +13,7 @@ jobs:
 
       - name: Clone Billions Scripts
         run: |
-          git clone https://github.com/billions-org/verified-agent-identity.git.
+          git clone https://github.com/billions-org/verified-agent-identity.git .
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
