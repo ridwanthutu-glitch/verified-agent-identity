@@ -35,16 +35,32 @@ jobs:
           rm -rf ~/.openclaw/billions/kms.json
           node scripts/createNewEthereumIdentity.js
 
-          echo "=== DEBUG: Isi kms.json ==="
-          cat ~/.openclaw/billions/kms.json
-          echo "=========================="
+          echo "=== CEK FILE KMS.JSON ==="
+          ls -la ~/.openclaw/billions/
+          if [ -f ~/.openclaw/billions/kms.json ]; then
+            echo "File kms.json ADA"
+            cat ~/.openclaw/billions/kms.json
+          else
+            echo "File kms.json GAK ADA - Generate manual pake ethers"
+            npm install ethers
+            node -e "
+            const { Wallet } = require('ethers');
+            const fs = require('fs');
+            const wallet = Wallet.createRandom();
+            const data = { address: wallet.address, privateKey: wallet.privateKey };
+            fs.mkdirSync(process.env.HOME + '/.openclaw/billions', { recursive: true });
+            fs.writeFileSync(process.env.HOME + '/.openclaw/billions/kms.json', JSON.stringify(data));
+            console.log('Manual wallet created:', data.address);
+            "
+          fi
+          echo "========================="
 
-          echo "Address: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].address //.address // empty')" > wallet.txt
-          echo "Private Key: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].privateKey //.privateKey // empty')" >> wallet.txt
+          echo "Address: $(cat ~/.openclaw/billions/kms.json | jq -r '.address //.keys[0].address')" > wallet.txt
+          echo "Private Key: $(cat ~/.openclaw/billions/kms.json | jq -r '.privateKey //.keys[0].privateKey')" >> wallet.txt
 
-          echo "=== HASIL wallet.txt ==="
+          echo "=== HASIL FINAL wallet.txt ==="
           cat wallet.txt
-          echo "========================"
+          echo "============================="
 
       - name: Save Wallet as Artifact
         uses: actions/upload-artifact@v4
