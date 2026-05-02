@@ -1,50 +1,48 @@
-name: Verify Human Identity
+name: Create New Billions Agent + Verify
 
 on:
   workflow_dispatch:
+    inputs:
+      agent_name:
+        description: 'joecold'
+        required: true
+        default: 'joecold'
 
 jobs:
-  verify-human-identity:
+  create-agent:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone Billions Scripts
-        run: |
-          git clone https://github.com/billions-org/verified-agent-identity.git billions
-          cd billions
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache-dependency-path: billions/package-lock.json
 
-      - name: Install dependencies
-        working-directory: ./billions
-        run: npm install
+      - name: Install Billions CLI
+        run: npm install -g @billions-network/cli
 
       - name: Step 1 - Register Identity
-        working-directory: ./billions
         run:  |
-          echo "Registering identity for: joecold"
-          node scripts/registerNewIdentity.js joecold
+          echo "Registering identity for: ${{ github.event.inputs.agent_name }}"
+          billions register ${{ github.event.inputs.agent_name }}
 
       - name: Step 2 - Create Ethereum Identity + Wallet 0x
-        working-directory: ./billions
         run:  |
-          rm -rf ~/.openclaw/billions/kms.json
-          node scripts/createNewEthereumIdentity.js
-          echo "Address: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].address')" > wallet.txt
-          echo "Private Key: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].privateKey')" >> wallet.txt
+          rm -rf ~/.billions
+          billions identity create --name ${{ github.event.inputs.agent_name }}
+          billions wallet export --name ${{ github.event.inputs.agent_name }} > wallet.txt
+          echo "=== WALLET CREATED ===" 
+          cat wallet.txt
 
       - name: Step 3 - Link Human to Agent
-        working-directory: ./billions
         run:  |
-          node scripts/manualLinkHumanToAgent.js joecold
+          echo "Linking human to agent: ${{ github.event.inputs.agent_name }}"
+          billions link ${{ github.event.inputs.agent_name }}
+          billions verify ${{ github.event.inputs.agent_name }}
 
       - name: Upload Wallet Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: agent-wallet-joecold
-          path: billions/wallet.txt
+          name: agent-wallet-${{ github.event.inputs.agent_name }}
+          path: wallet.txt
           retention-days: 90
