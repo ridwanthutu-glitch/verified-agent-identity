@@ -20,9 +20,6 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
       - name: Step 1 - Install ClawHub skill
         run: npx clawhub@latest install verified-agent-identity --force
 
@@ -30,37 +27,30 @@ jobs:
         working-directory: scripts
         run: npm install
 
-      - name: Step 2 - Create Ethereum Identity + Wallet 0x
+      - name: Step 2 - Create Wallet Baru + Derive Address
         run:  |
           rm -rf ~/.openclaw/billions/kms.json
           node scripts/createNewEthereumIdentity.js
 
-          echo "=== CEK FILE KMS.JSON ==="
-          ls -la ~/.openclaw/billions/
-          if [ -f ~/.openclaw/billions/kms.json ]; then
-            echo "File kms.json ADA"
-            cat ~/.openclaw/billions/kms.json
-          else
-            echo "File kms.json GAK ADA - Generate manual pake ethers"
-            npm install ethers
-            node -e "
-            const { Wallet } = require('ethers');
-            const fs = require('fs');
-            const wallet = Wallet.createRandom();
-            const data = { address: wallet.address, privateKey: wallet.privateKey };
-            fs.mkdirSync(process.env.HOME + '/.openclaw/billions', { recursive: true });
-            fs.writeFileSync(process.env.HOME + '/.openclaw/billions/kms.json', JSON.stringify(data));
-            console.log('Manual wallet created:', data.address);
-            "
-          fi
-          echo "========================="
+          npm install ethers
+          node -e "
+          const { Wallet } = require('ethers');
+          const fs = require('fs');
+          const kms = JSON.parse(fs.readFileSync(process.env.HOME + '/.openclaw/billions/kms.json', 'utf8'));
 
-          echo "Address: $(cat ~/.openclaw/billions/kms.json | jq -r '.address //.keys[0].address')" > wallet.txt
-          echo "Private Key: $(cat ~/.openclaw/billions/kms.json | jq -r '.privateKey //.keys[0].privateKey')" >> wallet.txt
+          const pk = kms[0].privateKeyHex;
+          const wallet = new Wallet(pk);
 
-          echo "=== HASIL FINAL wallet.txt ==="
-          cat wallet.txt
-          echo "============================="
+          fs.writeFileSync('wallet.txt',
+            'Agent Name: ${{ github.event.inputs.agent_name }}\\n' +
+            'Address: ' + wallet.address + '\\n' +
+            'Private Key: ' + wallet.privateKey + '\\n'
+          );
+
+          console.log('=== WALLET BARU ===');
+          console.log('Name:', '${{ github.event.inputs.agent_name }}');
+          console.log('Address:', wallet.address);
+          "
 
       - name: Save Wallet as Artifact
         uses: actions/upload-artifact@v4
@@ -69,6 +59,6 @@ jobs:
           path: wallet.txt
           retention-days: 90
 
-      - name: Step 3 - Link Human to Agent
+      - name: Step 3 - Link Human to Agent + Verify
         run:  |
           node scripts/manualLinkHumanToAgent.js --challenge '{"name": "${{ github.event.inputs.agent_name }}", "description": "${{ github.event.inputs.agent_name }} AI Agent"}'
