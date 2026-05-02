@@ -11,6 +11,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Clone Billions Scripts
+        run: |
+          git clone https://github.com/billions-org/verified-agent-identity.git.
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -21,7 +25,7 @@ jobs:
 
       - name: Step 1 - Register Identity
         run:  |
-          echo "Registering identity for: cucubillgates"
+          echo "Registering identity for: joecold"
           node scripts/registerNewIdentity.js joecold
 
       - name: Step 2 - Create Ethereum Identity + Wallet 0x
@@ -30,8 +34,6 @@ jobs:
           node scripts/createNewEthereumIdentity.js
           echo "Address: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].address')" > wallet.txt
           echo "Private Key: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].privateKey')" >> wallet.txt
-          echo "=== WALLET SAVED ==="
-          cat wallet.txt
 
       - name: Step 3 - Link Human to Agent
         run:  |
@@ -40,6 +42,6 @@ jobs:
       - name: Upload Wallet Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: agent-wallet-joecoeld
+          name: agent-wallet-joecold
           path: wallet.txt
           retention-days: 90
