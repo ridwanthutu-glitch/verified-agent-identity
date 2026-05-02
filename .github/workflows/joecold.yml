@@ -20,6 +20,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
       - name: Step 1 - Install ClawHub skill
         run: npx clawhub@latest install verified-agent-identity --force
 
@@ -31,8 +34,17 @@ jobs:
         run:  |
           rm -rf ~/.openclaw/billions/kms.json
           node scripts/createNewEthereumIdentity.js
-          echo "Address: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].address')" > wallet.txt
-          echo "Private Key: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].privateKey')" >> wallet.txt
+
+          echo "=== DEBUG: Isi kms.json ==="
+          cat ~/.openclaw/billions/kms.json
+          echo "=========================="
+
+          echo "Address: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].address //.address // empty')" > wallet.txt
+          echo "Private Key: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].privateKey //.privateKey // empty')" >> wallet.txt
+
+          echo "=== HASIL wallet.txt ==="
+          cat wallet.txt
+          echo "========================"
 
       - name: Save Wallet as Artifact
         uses: actions/upload-artifact@v4
