@@ -1,4 +1,4 @@
-name: Create New Billions Agent + Verify
+name: Verify Human Identity
 
 on:
   workflow_dispatch:
@@ -9,40 +9,38 @@ on:
         default: 'joecold'
 
 jobs:
-  create-agent:
+  verify:
     runs-on: ubuntu-latest
-
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Billions CLI
-        run: npm install -g @billions-network/cli
+      - name: Step 1 - Install ClawHub skill
+        run: npx clawhub@latest install verified-agent-identity --force
 
-      - name: Step 1 - Register Identity
-        run:  |
-          echo "Registering identity for: ${{ github.event.inputs.agent_name }}"
-          billions register ${{ github.event.inputs.agent_name }}
+      - name: Install script dependencies
+        working-directory: scripts
+        run: npm install
 
       - name: Step 2 - Create Ethereum Identity + Wallet 0x
         run:  |
-          rm -rf ~/.billions
-          billions identity create --name ${{ github.event.inputs.agent_name }}
-          billions wallet export --name ${{ github.event.inputs.agent_name }} > wallet.txt
-          echo "=== WALLET CREATED ===" 
-          cat wallet.txt
+          rm -rf ~/.openclaw/billions/kms.json
+          node scripts/createNewEthereumIdentity.js
+          echo "Address: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].address')" > wallet.txt
+          echo "Private Key: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].privateKey')" >> wallet.txt
 
-      - name: Step 3 - Link Human to Agent
-        run:  |
-          echo "Linking human to agent: ${{ github.event.inputs.agent_name }}"
-          billions link ${{ github.event.inputs.agent_name }}
-          billions verify ${{ github.event.inputs.agent_name }}
-
-      - name: Upload Wallet Artifact
+      - name: Save Wallet as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: agent-wallet-${{ github.event.inputs.agent_name }}
           path: wallet.txt
           retention-days: 90
+
+      - name: Step 3 - Link Human to Agent
+        run:  |
+          node scripts/manualLinkHumanToAgent.js --challenge '{"name": "${{ github.event.inputs.agent_name }}", "description": "${{ github.event.inputs.agent_name }} AI Agent"}'
