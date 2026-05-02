@@ -4,10 +4,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  verify:
+  verify-human-identity:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -15,26 +16,30 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Step 1 - Install ClawHub skill
-        run: npx clawhub@latest install verified-agent-identity --force
-
-      - name: Install script dependencies
-        working-directory: scripts
+      - name: Install dependencies
         run: npm install
+
+      - name: Step 1 - Register Identity
+        run:  |
+          echo "Registering identity for: cucubillgates"
+          node scripts/registerNewIdentity.js joecold
 
       - name: Step 2 - Create Ethereum Identity + Wallet 0x
         run:  |
+          rm -rf ~/.openclaw/billions/kms.json
           node scripts/createNewEthereumIdentity.js
           echo "Address: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].address')" > wallet.txt
           echo "Private Key: $(cat ~/.openclaw/billions/kms.json | jq -r '.keys[0].privateKey')" >> wallet.txt
-
-      - name: Save Wallet as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: agent-wallet-joecold
-          path: wallet.txt
-          retention-days: 90
+          echo "=== WALLET SAVED ==="
+          cat wallet.txt
 
       - name: Step 3 - Link Human to Agent
         run:  |
-          node scripts/manualLinkHumanToAgent.js --challenge '{"name": "joecold", "description": "joecold AI Agent"}'
+          node scripts/manualLinkHumanToAgent.js joecold
+
+      - name: Upload Wallet Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-wallet-joecoeld
+          path: wallet.txt
+          retention-days: 90
